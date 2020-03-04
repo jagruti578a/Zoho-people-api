@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:secure-properties="http://www.mulesoft.org/schema/mule/secure-properties" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/secure-properties http://www.mulesoft.org/schema/mule/secure-properties/current/mule-secure-properties.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="6474158b-a4c3-4692-9638-09bea7a98a20" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<http:request-config name="HTTP_Request_configuration" doc:name="HTTP Request configuration" doc:id="08b170f8-c21d-431e-bf9a-60c1dbf87ad5" basePath="${secure::request.basepath}">
+		<http:request-connection host="${secure::request.host}" protocol="HTTPS"/>
+	</http:request-config>
+	<configuration-properties doc:name="Configuration properties" doc:id="183b62f0-d02a-4de9-8a2e-4f5d6f817b00" file="config.yaml" />
+	<secure-properties:config name="Secure_Properties_Config" doc:name="Secure Properties Config" doc:id="6ae4aad9-e746-4e5a-9637-0515b06776c2" file="config.yaml" key="asdfghjkl" >
+		<secure-properties:encrypt algorithm="Blowfish" />
+	</secure-properties:config>
+	<flow name="zoho-people-api-main-Flow" doc:id="7aa74761-938e-4c82-93c5-8ccfd5c23a1a" >
+		<http:listener doc:name="GET/get-allemployee" doc:id="c437e922-4209-4464-8323-a2991425353d" config-ref="HTTP_Listener_config" path="/get-allemployee"/>
+		<http:request method="GET" doc:name="HTTP GET Zoho People Api" doc:id="69f4f760-20b9-404f-8374-015e55cb6f19" config-ref="HTTP_Request_configuration" path="${secure::request.path}">
+			<http:query-params ><![CDATA[#[output application/java
+---
+{
+	"sIndex" : "1",
+	"rec_limit" : "10",
+	"authtoken" : "19d2c5b6406f913beffdcf6692c4369f"
+}]]]></http:query-params>
+		</http:request>
+		<ee:transform doc:name="DW map payload" doc:id="12dd48dc-69c8-488d-9c8a-eb8c48517464" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="9f6f1e1f-e079-4471-8774-0dd0e71f69c6" >
+				<ee:transform doc:name="DW map error detail description to payload" doc:id="25d4e7e3-9bf9-494f-b7eb-95b34f9cdc3f" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+---
+{
+	Error: error.detailedDescription
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</on-error-propagate>
+		</error-handler>
+	</flow>
+</mule>
